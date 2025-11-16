@@ -463,10 +463,17 @@ function ContentBlueprintPage() {
           </form>
         </div>
 
-        <div className="text-center mt-8">
-          <Link to="/" className="text-slate-600 hover:text-slate-900 transition-colors font-medium">
-            Back to Home
-          </Link>
+        <div className="text-center mt-8 space-y-3">
+          <div>
+            <Link to="/" className="text-slate-600 hover:text-slate-900 transition-colors font-medium">
+              Back to Home
+            </Link>
+          </div>
+          <div>
+            <Link to="/content-review" className="text-blue-600 hover:text-blue-700 transition-colors font-medium">
+              View Content Review
+            </Link>
+          </div>
         </div>
       </main>
     </div>
