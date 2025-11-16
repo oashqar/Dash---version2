@@ -151,20 +151,6 @@ function ContentBlueprintPage() {
         asset_file_name: contentDraft.assetFile?.name || null,
       };
 
-      try {
-        const webhookResponse = await fetch('https://myaistaff.app.n8n.cloud/webhook-test/PostBluePrint', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(webhookPayload),
-        });
-
-        console.log('Webhook request sent, status:', webhookResponse.status);
-      } catch (webhookError) {
-        console.warn('Webhook request encountered an issue, but continuing:', webhookError);
-      }
-
       const draftData = {
         user_id: user.id,
         created_at: new Date().toISOString(),
@@ -187,6 +173,54 @@ function ContentBlueprintPage() {
       }
 
       console.log('Draft saved successfully:', data);
+
+      const draftId = data[0]?.id;
+
+      let generatedText = null;
+      let generatedImageUrl = null;
+
+      try {
+        const webhookResponse = await fetch('https://myaistaff.app.n8n.cloud/webhook-test/PostBluePrint', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ...webhookPayload,
+            draft_id: draftId,
+          }),
+        });
+
+        console.log('Webhook request sent, status:', webhookResponse.status);
+
+        if (webhookResponse.ok) {
+          const webhookData = await webhookResponse.json();
+          console.log('Webhook response data:', webhookData);
+
+          generatedText = webhookData.text || webhookData.generated_text || null;
+          generatedImageUrl = webhookData.url || webhookData.image_url || webhookData.generated_image_url || null;
+
+          if (draftId && (generatedText || generatedImageUrl)) {
+            const { error: updateError } = await supabase
+              .from('content_drafts')
+              .update({
+                generated_text: generatedText,
+                generated_image_url: generatedImageUrl,
+                generated_at: new Date().toISOString(),
+                status: 'content_generated',
+              })
+              .eq('id', draftId);
+
+            if (updateError) {
+              console.error('Error updating draft with generated content:', updateError);
+            } else {
+              console.log('Draft updated with generated content');
+            }
+          }
+        }
+      } catch (webhookError) {
+        console.warn('Webhook request encountered an issue:', webhookError);
+      }
 
       setSuccess('Data successfully submitted! Your post is being generated.');
 
