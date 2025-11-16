@@ -103,7 +103,7 @@ function ContentReviewPage() {
         approved_at: new Date().toISOString(),
       };
 
-      const webhookResponse = await fetch('https://myaistaff.app.n8n.cloud/webhook-test/ApprovedPost', {
+      const webhookResponse = await fetch('https://myaistaff.app.n8n.cloud/webhook/ApprovedPost', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
