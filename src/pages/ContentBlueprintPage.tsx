@@ -176,10 +176,17 @@ function ContentBlueprintPage() {
 
       const draftId = data[0]?.id;
 
+      console.log('Preparing to send webhook with payload:', {
+        ...webhookPayload,
+        draft_id: draftId,
+      });
+
       let generatedText = null;
       let generatedImageUrl = null;
 
       try {
+        console.log('Sending webhook request to: https://myaistaff.app.n8n.cloud/webhook/PostBluePrint');
+
         const webhookResponse = await fetch('https://myaistaff.app.n8n.cloud/webhook/PostBluePrint', {
           method: 'POST',
           headers: {
@@ -191,7 +198,7 @@ function ContentBlueprintPage() {
           }),
         });
 
-        console.log('Webhook request sent, status:', webhookResponse.status);
+        console.log('Webhook response received - Status:', webhookResponse.status, 'OK:', webhookResponse.ok);
 
         if (webhookResponse.ok) {
           const webhookData = await webhookResponse.json();
@@ -199,6 +206,8 @@ function ContentBlueprintPage() {
 
           generatedText = webhookData.text || webhookData.generated_text || null;
           generatedImageUrl = webhookData.url || webhookData.image_url || webhookData.generated_image_url || null;
+
+          console.log('Extracted from webhook - Text:', generatedText, 'Image URL:', generatedImageUrl);
 
           if (draftId && (generatedText || generatedImageUrl)) {
             const { error: updateError } = await supabase
@@ -214,12 +223,20 @@ function ContentBlueprintPage() {
             if (updateError) {
               console.error('Error updating draft with generated content:', updateError);
             } else {
-              console.log('Draft updated with generated content');
+              console.log('Draft updated successfully with generated content');
             }
           }
+        } else {
+          const errorText = await webhookResponse.text();
+          console.error('Webhook returned non-OK status:', webhookResponse.status, 'Response:', errorText);
         }
-      } catch (webhookError) {
-        console.warn('Webhook request encountered an issue:', webhookError);
+      } catch (webhookError: any) {
+        console.error('Webhook request failed with error:', webhookError);
+        console.error('Error details:', {
+          message: webhookError.message,
+          name: webhookError.name,
+          stack: webhookError.stack
+        });
       }
 
       setSuccess('Data successfully submitted! Your post is being generated.');
