@@ -24,6 +24,10 @@ function ContentBlueprintPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [waitingForWebhook, setWaitingForWebhook] = useState(false);
+  const [generatedText, setGeneratedText] = useState<string | null>(null);
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  const [webhookTimeout, setWebhookTimeout] = useState(false);
 
   const [contentDraft, setContentDraft] = useState<ContentDraft>({
     idea: '',
@@ -181,10 +185,20 @@ function ContentBlueprintPage() {
         draft_id: draftId,
       });
 
-      let generatedText = null;
-      let generatedImageUrl = null;
+      setWaitingForWebhook(true);
+      setWebhookTimeout(false);
+      setGeneratedText(null);
+      setGeneratedImageUrl(null);
+
+      let extractedText = null;
+      let extractedImageUrl = null;
+
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Webhook timeout after 2 minutes')), 120000);
+      });
 
       try {
+        const webhookPromise = (async () => {
         console.log('=== WEBHOOK REQUEST START ===');
         console.log('Webhook URL: https://myaistaff.app.n8n.cloud/webhook-test/PostBluePrint');
         console.log('Payload:', JSON.stringify({ ...webhookPayload, draft_id: draftId }, null, 2));
@@ -220,26 +234,29 @@ function ContentBlueprintPage() {
           if (Array.isArray(webhookData) && webhookData.length > 0) {
             const responseData = webhookData[0];
             console.log('Processing array response, first element:', responseData);
-            generatedText = responseData.facebookOutput?.[0] || null;
-            generatedImageUrl = responseData.url?.[0] || null;
+            extractedText = responseData.facebookOutput?.[0] || null;
+            extractedImageUrl = responseData.url?.[0] || null;
           } else if (typeof webhookData === 'object' && webhookData !== null) {
             console.log('Processing object response');
-            generatedText = webhookData.text || webhookData.generated_text || webhookData.facebookOutput?.[0] || null;
-            generatedImageUrl = webhookData.url?.[0] || webhookData.image_url || webhookData.generated_image_url || null;
+            extractedText = webhookData.text || webhookData.generated_text || webhookData.facebookOutput?.[0] || null;
+            extractedImageUrl = webhookData.url?.[0] || webhookData.image_url || webhookData.generated_image_url || null;
           }
 
           console.log('=== EXTRACTED DATA ===');
-          console.log('Generated Text:', generatedText);
-          console.log('Generated Image URL:', generatedImageUrl);
+          console.log('Generated Text:', extractedText);
+          console.log('Generated Image URL:', extractedImageUrl);
+
+          setGeneratedText(extractedText);
+          setGeneratedImageUrl(extractedImageUrl);
 
           if (draftId) {
-            if (generatedText || generatedImageUrl) {
+            if (extractedText || extractedImageUrl) {
               console.log('=== UPDATING DATABASE ===');
               console.log('Draft ID:', draftId);
 
               const updateData = {
-                generated_text: generatedText,
-                generated_image_url: generatedImageUrl,
+                generated_text: extractedText,
+                generated_image_url: extractedImageUrl,
                 generated_at: new Date().toISOString(),
                 status: 'content_generated',
               };
@@ -269,14 +286,29 @@ function ContentBlueprintPage() {
           console.error('Error response:', errorText);
         }
         console.log('=== WEBHOOK REQUEST END ===');
+        })();
+
+        await Promise.race([webhookPromise, timeoutPromise]);
+
       } catch (webhookError: any) {
         console.error('❌ WEBHOOK REQUEST FAILED');
         console.error('Error message:', webhookError.message);
         console.error('Error name:', webhookError.name);
         console.error('Error stack:', webhookError.stack);
+
+        if (webhookError.message.includes('timeout')) {
+          setWebhookTimeout(true);
+          setError('Webhook request timed out after 2 minutes. The content may still be processing.');
+        }
+      } finally {
+        setWaitingForWebhook(false);
       }
 
-      setSuccess('Data successfully submitted! Your post is being generated.');
+      if (generatedText || generatedImageUrl) {
+        setSuccess('Content generated successfully!');
+      } else if (!webhookTimeout) {
+        setSuccess('Draft created! Waiting for content generation...');
+      }
 
       setContentDraft({
         idea: '',
@@ -529,13 +561,18 @@ function ContentBlueprintPage() {
             <div className="pt-4">
               <button
                 type="submit"
-                disabled={!isFormValid() || loading}
+                disabled={!isFormValid() || loading || waitingForWebhook}
                 className="group w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white py-4 rounded-lg font-semibold transition-all hover:shadow-xl hover:shadow-blue-600/30 flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
                     Creating Content Draft...
+                  </>
+                ) : waitingForWebhook ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Generating Content...
                   </>
                 ) : (
                   <>
@@ -550,6 +587,95 @@ function ContentBlueprintPage() {
             </div>
           </form>
         </div>
+
+        {waitingForWebhook && (
+          <div className="mt-8 bg-white rounded-2xl shadow-xl border border-slate-200 p-8">
+            <div className="text-center">
+              <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Generating Your Content</h3>
+              <p className="text-slate-600">Please wait while we create your content. This may take up to 2 minutes...</p>
+            </div>
+          </div>
+        )}
+
+        {!waitingForWebhook && (generatedText || generatedImageUrl) && (
+          <div className="mt-8 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200 p-6">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="w-8 h-8 text-green-600" />
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900">Content Generated Successfully!</h3>
+                  <p className="text-slate-600">Review your AI-generated content below</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-8 space-y-8">
+              {generatedImageUrl && (
+                <div>
+                  <p className="text-sm font-semibold text-slate-700 mb-4">Generated Image</p>
+                  <div className="rounded-xl overflow-hidden border border-slate-200 shadow-lg">
+                    <img
+                      src={generatedImageUrl}
+                      alt="Generated content"
+                      className="w-full h-auto"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        console.error('Failed to load image:', generatedImageUrl);
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {generatedText && (
+                <div>
+                  <p className="text-sm font-semibold text-slate-700 mb-4">Generated Text</p>
+                  <div className="bg-slate-50 rounded-xl p-6 border border-slate-200">
+                    <p className="text-slate-900 text-lg leading-relaxed whitespace-pre-wrap">{generatedText}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-4 flex gap-4">
+                <button
+                  onClick={() => {
+                    setGeneratedText(null);
+                    setGeneratedImageUrl(null);
+                    setSuccess(null);
+                  }}
+                  className="flex-1 px-6 py-3 bg-white border-2 border-slate-300 text-slate-700 rounded-lg font-semibold hover:bg-slate-50 hover:border-slate-400 transition-all"
+                >
+                  Create New Content
+                </button>
+                <Link
+                  to="/content-review"
+                  className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-all hover:shadow-xl hover:shadow-blue-600/30 text-center"
+                >
+                  Go to Review Page
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {webhookTimeout && (
+          <div className="mt-8 bg-white rounded-2xl shadow-xl border border-amber-200 p-8">
+            <div className="text-center">
+              <AlertCircle className="w-12 h-12 text-amber-600 mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Request Timed Out</h3>
+              <p className="text-slate-600 mb-4">
+                The content generation is taking longer than expected. Your draft has been saved and the content may still be processing.
+              </p>
+              <Link
+                to="/content-review"
+                className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-all"
+              >
+                Check Review Page
+              </Link>
+            </div>
+          </div>
+        )}
 
         <div className="text-center mt-8 space-y-3">
           <div>
