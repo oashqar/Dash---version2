@@ -387,13 +387,19 @@ function ContentBlueprintPage() {
               console.log('=== UPDATING DATABASE ===');
               console.log('Draft ID:', draftId);
 
-              const updateData = {
+              const updateData: any = {
                 generated_text: extractedText,
-                generated_image_url: extractedImageUrl,
-                generated_video_url: extractedVideoUrl,
                 generated_at: new Date().toISOString(),
                 status: 'content_generated',
               };
+
+              if (contentDraft.format === 'Image + Text') {
+                updateData.generated_image_url = extractedImageUrl;
+              }
+
+              if (contentDraft.format === 'Video Post') {
+                updateData.generated_video_url = extractedVideoUrl;
+              }
 
               console.log('Update data:', updateData);
 
