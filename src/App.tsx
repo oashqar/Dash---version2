@@ -4,6 +4,7 @@ import LandingPage from './pages/LandingPage';
 import AuthPage from './pages/AuthPage';
 import ContentBlueprintPage from './pages/ContentBlueprintPage';
 import ContentReviewPage from './pages/ContentReviewPage';
+import ContentHistoryPage from './pages/ContentHistoryPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -26,6 +27,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <ContentReviewPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/content-history"
+            element={
+              <ProtectedRoute>
+                <ContentHistoryPage />
               </ProtectedRoute>
             }
           />

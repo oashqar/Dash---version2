@@ -66,7 +66,17 @@ export function Sidebar() {
                     : 'text-gray-700 bg-white/60 hover:bg-orange-50 border-2 border-orange-200/50'
                 }`}
               >
-                Content History
+                Review
+              </button>
+              <button
+                onClick={() => navigate('/content-history')}
+                className={`w-full px-4 py-2.5 text-left rounded-xl font-semibold transition-all transform hover:scale-105 ${
+                  isActive('/content-history')
+                    ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow-lg'
+                    : 'text-gray-700 bg-white/60 hover:bg-orange-50 border-2 border-orange-200/50'
+                }`}
+              >
+                History
               </button>
             </div>
           )}
