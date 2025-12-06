@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Bot, LogOut, FileText, Upload, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { FileText, Upload, CheckCircle2, AlertCircle, Loader2, Bot } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { signOut } from '../lib/auth';
-import type { User } from '@supabase/supabase-js';
+import { useAuth } from '../lib/authContext';
+import { Sidebar } from '../components/Sidebar';
 
 type Platform = 'Facebook' | 'Twitter (X)' | 'Instagram' | '';
 type Format = 'Text Only' | 'Image + Text' | 'Video Post' | '';
@@ -19,8 +19,7 @@ interface ContentDraft {
 }
 
 function ContentBlueprintPage() {
-  const navigate = useNavigate();
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,18 +45,6 @@ function ContentBlueprintPage() {
   });
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
     if (contentDraft.format === 'Text Only') {
       setContentDraft(prev => ({
         ...prev,
@@ -75,15 +62,6 @@ function ContentBlueprintPage() {
       }));
     }
   }, [contentDraft.assetSource]);
-
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      navigate('/');
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
-  };
 
   const handleIdeaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContentDraft(prev => ({ ...prev, idea: e.target.value }));
@@ -600,43 +578,22 @@ function ContentBlueprintPage() {
     }
   };
 
-  const displayName = user?.user_metadata?.display_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
-      <header className="border-b border-slate-200 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-              <Bot className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-2xl font-bold text-slate-900">Dash.ai</span>
-          </Link>
+    <div className="flex min-h-screen bg-gradient-to-br from-orange-50/30 via-white to-pink-50/30">
+      <Sidebar />
 
-          <div className="flex items-center gap-4">
-            <span className="text-slate-700 font-medium">
-              Welcome, {displayName}
-            </span>
-            <button
-              onClick={handleSignOut}
-              className="flex items-center gap-2 text-slate-700 hover:text-slate-900 font-medium transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              Sign Out
-            </button>
+      <main className="flex-1 overflow-y-auto">
+        <div className="max-w-4xl mx-auto px-6 py-12">
+          <div className="mb-8 text-center">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent mb-3">
+              Social Media Content Blueprint
+            </h1>
+            <p className="text-lg text-gray-700">
+              Let's create your next engaging social media post
+            </p>
           </div>
-        </div>
-      </header>
 
-      <main className="max-w-3xl mx-auto px-6 py-12">
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold text-slate-900 mb-3">Social Media Content Blueprint</h1>
-          <p className="text-lg text-slate-600">
-            Let's create your next engaging social media post
-          </p>
-        </div>
-
-        <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8">
+          <div className="bg-white rounded-2xl shadow-xl border-2 border-orange-200/50 p-8">
           {success && (
             <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
               <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
@@ -689,15 +646,15 @@ function ContentBlueprintPage() {
                     />
                     <label
                       htmlFor="knowledgeBase"
-                      className="flex items-center justify-center gap-2 w-full px-4 py-3 border-2 border-dashed border-slate-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all cursor-pointer text-slate-600 font-medium"
+                      className="flex items-center justify-center gap-2 w-full px-4 py-3 border-2 border-dashed border-orange-200 rounded-lg hover:border-orange-400 hover:bg-orange-50 transition-all cursor-pointer text-gray-600 font-medium"
                     >
                       <Upload className="w-5 h-5" />
                       {contentDraft.knowledgeBaseFile ? 'Change PDF File' : 'Upload PDF File'}
                     </label>
                   </div>
                   {contentDraft.knowledgeBaseFile && (
-                    <div className="mt-2 flex items-center gap-2 text-sm text-slate-600">
-                      <FileText className="w-4 h-4 text-blue-600" />
+                    <div className="mt-2 flex items-center gap-2 text-sm text-gray-600">
+                      <FileText className="w-4 h-4 text-orange-600" />
                       <span className="font-medium">{contentDraft.knowledgeBaseFile.name}</span>
                     </div>
                   )}
@@ -723,8 +680,8 @@ function ContentBlueprintPage() {
                         onClick={() => handlePlatformChange(platform)}
                         className={`px-4 py-3 rounded-lg font-semibold transition-all ${
                           contentDraft.platform === platform
-                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                            : 'bg-white border-2 border-slate-300 text-slate-700 hover:border-blue-400 hover:bg-blue-50'
+                            ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow-lg'
+                            : 'bg-white border-2 border-orange-200 text-gray-700 hover:border-orange-400 hover:bg-orange-50'
                         }`}
                       >
                         {platform}
@@ -745,8 +702,8 @@ function ContentBlueprintPage() {
                         onClick={() => handleFormatChange(format)}
                         className={`px-4 py-3 rounded-lg font-semibold transition-all ${
                           contentDraft.format === format
-                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                            : 'bg-white border-2 border-slate-300 text-slate-700 hover:border-blue-400 hover:bg-blue-50'
+                            ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow-lg'
+                            : 'bg-white border-2 border-orange-200 text-gray-700 hover:border-orange-400 hover:bg-orange-50'
                         }`}
                       >
                         {format}
@@ -776,8 +733,8 @@ function ContentBlueprintPage() {
                           onClick={() => handleAssetSourceChange(source)}
                           className={`px-4 py-3 rounded-lg font-semibold transition-all ${
                             contentDraft.assetSource === source
-                              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                              : 'bg-white border-2 border-slate-300 text-slate-700 hover:border-blue-400 hover:bg-blue-50'
+                              ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow-lg'
+                              : 'bg-white border-2 border-orange-200 text-gray-700 hover:border-orange-400 hover:bg-orange-50'
                           }`}
                         >
                           {source}
@@ -809,8 +766,8 @@ function ContentBlueprintPage() {
                           htmlFor="assetFile"
                           className={`flex items-center justify-center gap-2 w-full px-4 py-3 border-2 border-dashed rounded-lg transition-all font-medium ${
                             uploadingFile
-                              ? 'border-blue-400 bg-blue-50 cursor-wait text-blue-700'
-                              : 'border-slate-300 hover:border-blue-400 hover:bg-blue-50 cursor-pointer text-slate-600'
+                              ? 'border-orange-400 bg-orange-50 cursor-wait text-orange-700'
+                              : 'border-orange-200 hover:border-orange-400 hover:bg-orange-50 cursor-pointer text-gray-600'
                           }`}
                         >
                           {uploadingFile ? (
@@ -829,8 +786,8 @@ function ContentBlueprintPage() {
                         </label>
                       </div>
                       {contentDraft.assetFile && (
-                        <div className="mt-2 flex items-center gap-2 text-sm text-slate-600">
-                          <FileText className="w-4 h-4 text-blue-600" />
+                        <div className="mt-2 flex items-center gap-2 text-sm text-gray-600">
+                          <FileText className="w-4 h-4 text-orange-600" />
                           <span className="font-medium">{contentDraft.assetFile.name}</span>
                         </div>
                       )}
@@ -844,7 +801,7 @@ function ContentBlueprintPage() {
               <button
                 type="submit"
                 disabled={!isFormValid() || loading || waitingForWebhook}
-                className="group w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white py-4 rounded-lg font-semibold transition-all hover:shadow-xl hover:shadow-blue-600/30 flex items-center justify-center gap-2"
+                className="group w-full bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 disabled:from-slate-400 disabled:to-slate-400 disabled:cursor-not-allowed text-white py-4 rounded-lg font-semibold transition-all hover:shadow-xl hover:shadow-orange-500/30 flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>
@@ -1078,7 +1035,7 @@ function ContentBlueprintPage() {
                     </button>
                     <Link
                       to="/content-review"
-                      className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-all hover:shadow-xl hover:shadow-blue-600/30 text-center"
+                      className="flex-1 px-6 py-3 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-lg font-semibold transition-all hover:shadow-xl hover:shadow-orange-500/30 text-center"
                     >
                       Go to Review Page
                     </Link>
@@ -1097,7 +1054,7 @@ function ContentBlueprintPage() {
                   </p>
                   <Link
                     to="/content-review"
-                    className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-all"
+                    className="inline-block px-6 py-3 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-lg font-semibold transition-all"
                   >
                     Check Review Page
                   </Link>
@@ -1106,22 +1063,11 @@ function ContentBlueprintPage() {
             )}
           </div>
         </div>
-
-        <div className="text-center mt-8 space-y-3">
-          <div>
-            <Link to="/" className="text-slate-600 hover:text-slate-900 transition-colors font-medium">
-              Back to Home
-            </Link>
-          </div>
-          <div>
-            <Link to="/content-review" className="text-blue-600 hover:text-blue-700 transition-colors font-medium">
-              View Content Review
-            </Link>
-          </div>
-        </div>
+      </div>
       </main>
     </div>
   );
 }
+
 
 export default ContentBlueprintPage;
