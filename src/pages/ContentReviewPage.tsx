@@ -28,6 +28,7 @@ function ContentReviewPage() {
   const [loading, setLoading] = useState(false);
   const [fetchingContent, setFetchingContent] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [latestDraft, setLatestDraft] = useState<ContentDraft | null>(null);
 
   useEffect(() => {
@@ -39,6 +40,7 @@ function ContentReviewPage() {
   const fetchLatestContent = async (userId: string) => {
     setFetchingContent(true);
     setError(null);
+    setSuccessMessage(null);
 
     try {
       const { data, error: fetchError } = await supabase
@@ -73,6 +75,7 @@ function ContentReviewPage() {
 
     setLoading(true);
     setError(null);
+    setSuccessMessage(null);
 
     try {
       const { error: updateError } = await supabase
@@ -83,6 +86,8 @@ function ContentReviewPage() {
       if (updateError) {
         throw updateError;
       }
+
+      setSuccessMessage('The approval has been registered in the database successfully!');
 
       const webhookPayload = {
         draft_id: latestDraft.id,
@@ -96,10 +101,9 @@ function ContentReviewPage() {
         body: JSON.stringify(webhookPayload),
       });
 
-      setError(null);
       setTimeout(() => {
         navigate('/content-blueprint');
-      }, 500);
+      }, 2000);
     } catch (err: any) {
       console.error('Error approving content:', err);
       setError('Failed to approve content. Please try again.');
@@ -113,6 +117,7 @@ function ContentReviewPage() {
 
     setLoading(true);
     setError(null);
+    setSuccessMessage(null);
 
     try {
       const { error: updateError } = await supabase
@@ -124,7 +129,12 @@ function ContentReviewPage() {
         throw updateError;
       }
 
-      navigate('/content-blueprint');
+      setSuccessMessage('The rejection has been registered in the database successfully!');
+      setLoading(false);
+
+      setTimeout(() => {
+        navigate('/content-blueprint');
+      }, 2000);
     } catch (err: any) {
       console.error('Error rejecting content:', err);
       setError('Failed to reject content. Please try again.');
@@ -160,6 +170,13 @@ function ContentReviewPage() {
             <div className="m-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
               <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
               <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
+
+          {successMessage && (
+            <div className="m-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
+              <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
+              <p className="text-sm text-green-700">{successMessage}</p>
             </div>
           )}
 
