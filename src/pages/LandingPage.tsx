@@ -1,17 +1,18 @@
 import { useNavigate } from 'react-router-dom';
 import { Smartphone, Sparkles, Target, MessageSquare, Zap, ArrowRight, Twitter, Linkedin, Github, LogOut } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { signOut } from '../lib/auth';
 import type { User } from '@supabase/supabase-js';
-import VideoModal from '../components/VideoModal';
 
 export default function LandingPage() {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
-  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [hoveredFeature, setHoveredFeature] = useState<number | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoSectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -39,6 +40,14 @@ export default function LandingPage() {
     } catch (error) {
       console.error('Error signing out:', error);
     }
+  };
+
+  const handleWatchDemo = () => {
+    setIsVideoPlaying(true);
+    videoSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => {
+      videoRef.current?.play();
+    }, 500);
   };
 
   const displayName = user?.user_metadata?.display_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
@@ -194,7 +203,7 @@ export default function LandingPage() {
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
             <button
-              onClick={() => setShowVideoModal(true)}
+              onClick={handleWatchDemo}
               className="group bg-white hover:bg-gray-50 text-gray-900 font-semibold px-10 py-5 rounded-full text-lg transition-all border-2 border-gray-200 hover:border-gray-300 transform hover:scale-105 hover:shadow-xl flex items-center gap-2"
             >
               Watch Demo
@@ -202,28 +211,41 @@ export default function LandingPage() {
             </button>
           </div>
 
-          <div className="relative animate-scale-in" style={{ animationDelay: '0.4s' }}>
+          <div ref={videoSectionRef} className="relative animate-scale-in" style={{ animationDelay: '0.4s' }}>
             <div className="absolute -inset-4 bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 rounded-3xl blur-2xl opacity-20" />
             <div className="relative bg-white/50 backdrop-blur-sm rounded-3xl p-4 shadow-2xl border border-gray-200">
               <div className="relative w-full aspect-video bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 via-pink-500/10 to-purple-500/10" />
-                <svg
-                  className="w-full h-full opacity-10"
-                  viewBox="0 0 800 450"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <line x1="0" y1="0" x2="800" y2="450" stroke="#9CA3AF" strokeWidth="2" />
-                  <line x1="800" y1="0" x2="0" y2="450" stroke="#9CA3AF" strokeWidth="2" />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-orange-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-xl animate-pulse-slow">
-                      <Sparkles className="w-10 h-10 text-white" />
+                {!isVideoPlaying && (
+                  <>
+                    <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 via-pink-500/10 to-purple-500/10" />
+                    <svg
+                      className="w-full h-full opacity-10"
+                      viewBox="0 0 800 450"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <line x1="0" y1="0" x2="800" y2="450" stroke="#9CA3AF" strokeWidth="2" />
+                      <line x1="800" y1="0" x2="0" y2="450" stroke="#9CA3AF" strokeWidth="2" />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-orange-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-xl animate-pulse-slow">
+                          <Sparkles className="w-10 h-10 text-white" />
+                        </div>
+                        <p className="text-gray-700 text-lg font-semibold">Platform Preview</p>
+                      </div>
                     </div>
-                    <p className="text-gray-700 text-lg font-semibold">Platform Preview</p>
-                  </div>
-                </div>
+                  </>
+                )}
+                <video
+                  ref={videoRef}
+                  className={`w-full h-full object-cover rounded-2xl ${isVideoPlaying ? 'block' : 'hidden'}`}
+                  controls
+                  onEnded={() => setIsVideoPlaying(false)}
+                >
+                  <source src="https://ntetahapqyfjomzdhayn.supabase.co/storage/v1/object/public/ai-videos/ProductIntro.mp4" type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
               </div>
             </div>
           </div>
@@ -352,7 +374,7 @@ export default function LandingPage() {
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
             <button
-              onClick={() => setShowVideoModal(true)}
+              onClick={handleWatchDemo}
               className="group bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white font-semibold px-10 py-5 rounded-full text-lg transition-all border-2 border-white/30 hover:border-white/50 transform hover:scale-105 flex items-center gap-2"
             >
               See it in action
@@ -425,8 +447,6 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
-
-      <VideoModal isOpen={showVideoModal} onClose={() => setShowVideoModal(false)} />
     </div>
   );
 }
