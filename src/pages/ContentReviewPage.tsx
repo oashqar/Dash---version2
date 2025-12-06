@@ -28,7 +28,6 @@ function ContentReviewPage() {
   const [loading, setLoading] = useState(false);
   const [fetchingContent, setFetchingContent] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [latestDraft, setLatestDraft] = useState<ContentDraft | null>(null);
 
   useEffect(() => {
@@ -40,7 +39,6 @@ function ContentReviewPage() {
   const fetchLatestContent = async (userId: string) => {
     setFetchingContent(true);
     setError(null);
-    setSuccessMessage(null);
 
     try {
       const { data, error: fetchError } = await supabase
@@ -75,46 +73,33 @@ function ContentReviewPage() {
 
     setLoading(true);
     setError(null);
-    setSuccessMessage(null);
 
     try {
-      console.log('Approving content draft:', latestDraft.id);
-      console.log('Current user:', user?.id);
-
-      const { data, error: updateError } = await supabase
+      const { error: updateError } = await supabase
         .from('content_drafts')
         .update({ status: 'content_generated_approved' })
-        .eq('id', latestDraft.id)
-        .select();
-
-      console.log('Update response:', { data, error: updateError });
+        .eq('id', latestDraft.id);
 
       if (updateError) {
-        console.error('Database update error:', updateError);
         throw updateError;
       }
 
-      setSuccessMessage('The approval has been registered in the database successfully!');
+      const webhookPayload = {
+        draft_id: latestDraft.id,
+      };
 
-      try {
-        const webhookPayload = {
-          draft_id: latestDraft.id,
-        };
+      await fetch('https://myaistaff.app.n8n.cloud/webhook-test/Approved', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(webhookPayload),
+      });
 
-        await fetch('https://myaistaff.app.n8n.cloud/webhook-test/Approved', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(webhookPayload),
-        });
-      } catch (webhookErr) {
-        console.error('Webhook call failed (non-critical):', webhookErr);
-      }
-
+      setError(null);
       setTimeout(() => {
         navigate('/content-blueprint');
-      }, 2000);
+      }, 500);
     } catch (err: any) {
       console.error('Error approving content:', err);
       setError('Failed to approve content. Please try again.');
@@ -128,31 +113,18 @@ function ContentReviewPage() {
 
     setLoading(true);
     setError(null);
-    setSuccessMessage(null);
 
     try {
-      console.log('Rejecting content draft:', latestDraft.id);
-      console.log('Current user:', user?.id);
-
-      const { data, error: updateError } = await supabase
+      const { error: updateError } = await supabase
         .from('content_drafts')
         .update({ status: 'content_generated_Rejected' })
-        .eq('id', latestDraft.id)
-        .select();
-
-      console.log('Update response:', { data, error: updateError });
+        .eq('id', latestDraft.id);
 
       if (updateError) {
-        console.error('Database update error:', updateError);
         throw updateError;
       }
 
-      setSuccessMessage('The rejection has been registered in the database successfully!');
-      setLoading(false);
-
-      setTimeout(() => {
-        navigate('/content-blueprint');
-      }, 2000);
+      navigate('/content-blueprint');
     } catch (err: any) {
       console.error('Error rejecting content:', err);
       setError('Failed to reject content. Please try again.');
@@ -188,13 +160,6 @@ function ContentReviewPage() {
             <div className="m-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
               <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
               <p className="text-sm text-red-700">{error}</p>
-            </div>
-          )}
-
-          {successMessage && (
-            <div className="m-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
-              <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
-              <p className="text-sm text-green-700">{successMessage}</p>
             </div>
           )}
 
