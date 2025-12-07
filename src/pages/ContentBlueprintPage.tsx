@@ -10,11 +10,12 @@ type Format = 'Text Only' | 'Image + Text' | 'Video Post' | '';
 type AssetSource = 'AI Generate' | 'Upload My Own' | '';
 
 interface ContentDraft {
+  campaignName: string;
   idea: string;
   platform: Platform;
-  
+
   format: Format;
-  
+
   assetSource: AssetSource;
   knowledgeBaseFile: File | null;
   assetFile: File | null;
@@ -38,6 +39,7 @@ function ContentBlueprintPage() {
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
 
   const [contentDraft, setContentDraft] = useState<ContentDraft>({
+    campaignName: '',
     idea: '',
     platform: '',
     format: '',
@@ -64,6 +66,10 @@ function ContentBlueprintPage() {
       }));
     }
   }, [contentDraft.assetSource]);
+
+  const handleCampaignNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setContentDraft(prev => ({ ...prev, campaignName: e.target.value }));
+  };
 
   const handleIdeaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContentDraft(prev => ({ ...prev, idea: e.target.value }));
@@ -316,6 +322,7 @@ function ContentBlueprintPage() {
   };
 
   const isFormValid = () => {
+    if (!contentDraft.campaignName.trim()) return false;
     if (!contentDraft.idea.trim()) return false;
     if (!contentDraft.platform) return false;
     if (!contentDraft.format) return false;
@@ -345,10 +352,14 @@ function ContentBlueprintPage() {
         throw new Error('User not authenticated');
       }
 
+      const campaignId = crypto.randomUUID();
+
       const webhookPayload = {
         user_id: user.id,
         email: user.email,
         created_at: new Date().toISOString(),
+        campaign_name: contentDraft.campaignName.trim(),
+        campaign_id: campaignId,
         idea: contentDraft.idea.trim(),
         platform: contentDraft.platform,
         format: contentDraft.format,
@@ -360,6 +371,8 @@ function ContentBlueprintPage() {
       const draftData = {
         user_id: user.id,
         created_at: new Date().toISOString(),
+        campaign_name: contentDraft.campaignName.trim(),
+        campaign_id: campaignId,
         idea: contentDraft.idea.trim(),
         platform: contentDraft.platform,
         format: contentDraft.format,
@@ -560,6 +573,7 @@ function ContentBlueprintPage() {
       }
 
       setContentDraft({
+        campaignName: '',
         idea: '',
         platform: '',
         format: '',
@@ -613,10 +627,26 @@ function ContentBlueprintPage() {
           <form onSubmit={handleSubmit} className="space-y-8">
             <div>
               <h2 className="text-xl font-bold text-slate-900 mb-6 pb-3 border-b border-slate-200">
-                Content Idea & Knowledge Base
+                Campaign & Content Details
               </h2>
 
               <div className="space-y-5">
+                <div>
+                  <label htmlFor="campaignName" className="block text-sm font-semibold text-slate-700 mb-2">
+                    Campaign Name <span className="text-red-500">*</span>
+                  </label>
+                  <p className="text-sm text-slate-500 mb-2">Give your campaign a descriptive name</p>
+                  <input
+                    type="text"
+                    id="campaignName"
+                    value={contentDraft.campaignName}
+                    onChange={handleCampaignNameChange}
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all text-slate-900 placeholder:text-slate-400"
+                    placeholder="Example: Summer Product Launch 2024"
+                    required
+                  />
+                </div>
+
                 <div>
                   <label htmlFor="idea" className="block text-sm font-semibold text-slate-700 mb-2">
                     Content Idea <span className="text-red-500">*</span>
