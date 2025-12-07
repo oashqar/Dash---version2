@@ -12,7 +12,9 @@ type AssetSource = 'AI Generate' | 'Upload My Own' | '';
 interface ContentDraft {
   idea: string;
   platform: Platform;
+  
   format: Format;
+  
   assetSource: AssetSource;
   knowledgeBaseFile: File | null;
   assetFile: File | null;
