@@ -181,7 +181,7 @@ export default function LandingPage() {
 
         <div className="relative max-w-6xl mx-auto text-center">
           <div className="animate-fade-in">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-6 leading-tight">
               Your AI Partner for Instant Social Media Posts
               <br />
               <span className="text-4xl md:text-5xl lg:text-6xl bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 bg-clip-text text-transparent">
