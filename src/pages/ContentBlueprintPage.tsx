@@ -34,7 +34,6 @@ function ContentBlueprintPage() {
   const [userUploadedVideoUrl, setUserUploadedVideoUrl] = useState<string | null>(null);
   const [isMediaReady, setIsMediaReady] = useState(false);
   const [webhookTimeout, setWebhookTimeout] = useState(false);
-  const [testingWebhook, setTestingWebhook] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
 
@@ -188,127 +187,6 @@ function ContentBlueprintPage() {
       e.target.value = '';
     } finally {
       setUploadingFile(false);
-    }
-  };
-
-  const handleTestWebhook = async (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    setTestingWebhook(true);
-    setError(null);
-    setSuccess(null);
-    setWaitingForWebhook(true);
-    setWebhookTimeout(false);
-    setGeneratedText(null);
-    setGeneratedImageUrl(null);
-
-    try {
-      if (!user?.id) {
-        throw new Error('User not authenticated');
-      }
-
-      const webhookPayload = {
-        user_id: user.id,
-        email: user.email,
-        created_at: new Date().toISOString(),
-        idea: contentDraft.idea.trim() || 'Test content idea',
-        platform: contentDraft.platform || 'Facebook',
-        format: contentDraft.format || 'Text Only',
-        asset_source: contentDraft.format === 'Text Only' ? null : contentDraft.assetSource,
-        knowledge_base_file_name: contentDraft.knowledgeBaseFile?.name || null,
-        asset_file_name: contentDraft.assetFile?.name || null,
-        test_mode: true,
-      };
-
-      console.log('=== TEST WEBHOOK REQUEST START ===');
-      console.log('Webhook URL: https://myaistaff.app.n8n.cloud/webhook/PostBluePrint');
-      console.log('Payload:', JSON.stringify(webhookPayload, null, 2));
-
-      let extractedText = null;
-      let extractedImageUrl = null;
-
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Webhook timeout after 2 minutes')), 120000);
-      });
-
-      try {
-        const webhookPromise = (async () => {
-          const webhookResponse = await fetch('https://myaistaff.app.n8n.cloud/webhook/PostBluePrint', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(webhookPayload),
-          });
-
-          console.log('Webhook response status:', webhookResponse.status);
-          console.log('Webhook response headers:', Object.fromEntries(webhookResponse.headers.entries()));
-
-          if (webhookResponse.ok) {
-            const responseText = await webhookResponse.text();
-            console.log('Raw webhook response:', responseText);
-
-            let webhookData;
-            try {
-              webhookData = JSON.parse(responseText);
-              console.log('Parsed webhook data:', JSON.stringify(webhookData, null, 2));
-            } catch (parseError) {
-              console.error('Failed to parse webhook response as JSON:', parseError);
-              throw new Error('Webhook returned invalid JSON');
-            }
-
-            if (Array.isArray(webhookData) && webhookData.length > 0) {
-              const responseData = webhookData[0];
-              console.log('Processing array response, first element:', responseData);
-              extractedText = responseData.generated_text || responseData.facebookOutput?.[0] || null;
-              extractedImageUrl = responseData.generated_image_url || responseData.url?.[0] || null;
-            } else if (typeof webhookData === 'object' && webhookData !== null) {
-              console.log('Processing object response');
-              extractedText = webhookData.generated_text || webhookData.text || webhookData.facebookOutput?.[0] || null;
-              extractedImageUrl = webhookData.generated_image_url || webhookData.url?.[0] || webhookData.image_url || null;
-            }
-
-            console.log('=== EXTRACTED DATA ===');
-            console.log('Generated Text:', extractedText);
-            console.log('Generated Image URL:', extractedImageUrl);
-
-            setGeneratedText(extractedText);
-            setGeneratedImageUrl(extractedImageUrl);
-          } else {
-            console.error('Webhook request failed with status:', webhookResponse.status);
-            throw new Error(`Webhook request failed: ${webhookResponse.status}`);
-          }
-
-          console.log('=== TEST WEBHOOK REQUEST END ===');
-        })();
-
-        await Promise.race([webhookPromise, timeoutPromise]);
-
-      } catch (webhookError: any) {
-        console.error('❌ TEST WEBHOOK REQUEST FAILED');
-        console.error('Error message:', webhookError.message);
-        console.error('Error name:', webhookError.name);
-        console.error('Error stack:', webhookError.stack);
-
-        if (webhookError.message.includes('timeout')) {
-          setWebhookTimeout(true);
-          setError('Test webhook request timed out after 2 minutes.');
-        } else {
-          setError(`Test webhook failed: ${webhookError.message}`);
-        }
-      }
-
-      if (extractedText || extractedImageUrl) {
-        setSuccess('Test webhook successful! Content generated.');
-      } else if (!webhookTimeout) {
-        setSuccess('Test webhook sent successfully, but no content was returned.');
-      }
-
-    } catch (err: any) {
-      console.error('Test webhook error:', err);
-      setError(err.message || 'Failed to test webhook');
-    } finally {
-      setTestingWebhook(false);
-      setWaitingForWebhook(false);
     }
   };
 
@@ -840,7 +718,7 @@ function ContentBlueprintPage() {
                     <Loader2 className="w-5 h-5 animate-spin" />
                     Creating Content Draft...
                   </>
-                ) : waitingForWebhook && !testingWebhook ? (
+                ) : waitingForWebhook ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
                     Generating Content...
@@ -849,25 +727,6 @@ function ContentBlueprintPage() {
                   <>
                     Generate Content Draft
                     <CheckCircle2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                  </>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={handleTestWebhook}
-                disabled={testingWebhook || waitingForWebhook}
-                className="group w-full bg-slate-600 hover:bg-slate-700 disabled:bg-slate-400 disabled:cursor-not-allowed text-white py-4 rounded-lg font-semibold transition-all hover:shadow-xl hover:shadow-slate-600/30 flex items-center justify-center gap-2"
-              >
-                {testingWebhook ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Testing Webhook...
-                  </>
-                ) : (
-                  <>
-                    Test Webhook
-                    <Bot className="w-5 h-5 group-hover:scale-110 transition-transform" />
                   </>
                 )}
               </button>
