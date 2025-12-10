@@ -37,6 +37,9 @@ function ContentBlueprintPage() {
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
   const [submittedCampaignName, setSubmittedCampaignName] = useState<string>('');
   const [submittedIdea, setSubmittedIdea] = useState<string>('');
+  const [submittedPlatform, setSubmittedPlatform] = useState<string>('');
+  const [submittedFormat, setSubmittedFormat] = useState<string>('');
+  const [submittedAssetSource, setSubmittedAssetSource] = useState<string>('');
 
   const [contentDraft, setContentDraft] = useState<ContentDraft>({
     campaignName: '',
@@ -445,6 +448,9 @@ function ContentBlueprintPage() {
 
       setSubmittedCampaignName(contentDraft.campaignName.trim());
       setSubmittedIdea(contentDraft.idea.trim());
+      setSubmittedPlatform(contentDraft.platform);
+      setSubmittedFormat(contentDraft.format);
+      setSubmittedAssetSource(contentDraft.format === 'Text Only' ? '' : contentDraft.assetSource);
 
       setContentDraft({
         campaignName: '',
@@ -462,6 +468,218 @@ function ContentBlueprintPage() {
     } catch (err: any) {
       console.error('Error saving draft:', err);
       setError(err.message || 'Failed to create content draft. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegenerate = async () => {
+    if (!submittedCampaignName || !submittedIdea) {
+      setError('Cannot regenerate: missing original content information');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      if (!user?.id) {
+        throw new Error('User not authenticated');
+      }
+
+      const campaignId = crypto.randomUUID();
+
+      const webhookPayload = {
+        user_id: user.id,
+        email: user.email,
+        created_at: new Date().toISOString(),
+        campaign_name: submittedCampaignName,
+        campaign_id: campaignId,
+        idea: submittedIdea,
+        platform: submittedPlatform,
+        format: submittedFormat,
+        asset_source: submittedFormat === 'Text Only' ? null : submittedAssetSource,
+        asset_file_name: null,
+      };
+
+      const draftData = {
+        user_id: user.id,
+        created_at: new Date().toISOString(),
+        campaign_name: submittedCampaignName,
+        campaign_id: campaignId,
+        idea: submittedIdea,
+        platform: submittedPlatform,
+        format: submittedFormat,
+        asset_source: submittedFormat === 'Text Only' ? null : submittedAssetSource,
+        asset_file_name: null,
+        status: 'draft_created',
+      };
+
+      const { data, error: insertError } = await supabase
+        .from('content_drafts')
+        .insert([draftData])
+        .select();
+
+      if (insertError) {
+        throw insertError;
+      }
+
+      console.log('Draft saved successfully:', data);
+
+      const draftId = data[0]?.id;
+      setCurrentDraftId(draftId);
+
+      console.log('Preparing to send webhook with payload:', {
+        ...webhookPayload,
+        draft_id: draftId,
+      });
+
+      setWaitingForWebhook(true);
+      setWebhookTimeout(false);
+      setGeneratedText(null);
+      setGeneratedImageUrl(null);
+      setGeneratedVideoUrl(null);
+
+      let extractedText = null;
+      let extractedImageUrl = null;
+
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Webhook timeout after 2 minutes')), 120000);
+      });
+
+      try {
+        const webhookPromise = (async () => {
+        console.log('=== WEBHOOK REQUEST START (REGENERATE) ===');
+        console.log('Webhook URL: https://myaistaff.app.n8n.cloud/webhook/PostBluePrint');
+        console.log('Payload:', JSON.stringify({ ...webhookPayload, draft_id: draftId }, null, 2));
+
+        const webhookResponse = await fetch('https://myaistaff.app.n8n.cloud/webhook/PostBluePrint', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ...webhookPayload,
+            draft_id: draftId,
+          }),
+        });
+
+        console.log('Webhook response status:', webhookResponse.status);
+        console.log('Webhook response ok:', webhookResponse.ok);
+
+        if (webhookResponse.ok) {
+          const responseText = await webhookResponse.text();
+          console.log('Raw webhook response:', responseText);
+
+          let webhookData;
+          try {
+            webhookData = JSON.parse(responseText);
+            console.log('Parsed webhook data:', JSON.stringify(webhookData, null, 2));
+          } catch (parseError) {
+            console.error('Failed to parse webhook response as JSON:', parseError);
+            throw new Error('Webhook returned invalid JSON');
+          }
+
+          let extractedVideoUrl: string | null = null;
+
+          if (Array.isArray(webhookData) && webhookData.length > 0) {
+            const responseData = webhookData[0];
+            extractedText = responseData.generated_text || responseData.post_content || responseData.facebookOutput?.[0] || null;
+            extractedImageUrl = responseData.generated_image_url || responseData.url?.[0] || null;
+            extractedVideoUrl = responseData.generated_video_url || responseData.video_url || null;
+          } else if (typeof webhookData === 'object' && webhookData !== null) {
+            extractedText = webhookData.generated_text || webhookData.post_content || webhookData.text || webhookData.facebookOutput?.[0] || null;
+            extractedImageUrl = webhookData.generated_image_url || webhookData.url?.[0] || webhookData.image_url || null;
+            extractedVideoUrl = webhookData.generated_video_url || webhookData.video_url || null;
+          }
+
+          if (extractedText && typeof extractedText === 'string') {
+            extractedText = extractedText.replace(/^["'\s]+|["'\s]+$/g, '').trim();
+          }
+
+          console.log('=== EXTRACTED DATA ===');
+          console.log('Generated Text:', extractedText);
+          console.log('Generated Image URL:', extractedImageUrl);
+          console.log('Generated Video URL:', extractedVideoUrl);
+
+          setGeneratedText(extractedText);
+          setGeneratedImageUrl(extractedImageUrl);
+          setGeneratedVideoUrl(extractedVideoUrl);
+
+          if (draftId) {
+            if (extractedText || extractedImageUrl || extractedVideoUrl) {
+              console.log('=== UPDATING DATABASE ===');
+              console.log('Draft ID:', draftId);
+
+              const updateData: any = {
+                generated_text: extractedText,
+                generated_at: new Date().toISOString(),
+                status: 'content_generated',
+              };
+
+              if (submittedFormat === 'Image + Text') {
+                updateData.generated_image_url = extractedImageUrl;
+              }
+
+              if (submittedFormat === 'Video Post') {
+                updateData.generated_video_url = extractedVideoUrl;
+              }
+
+              console.log('Update data:', updateData);
+
+              const { data: updateResult, error: updateError } = await supabase
+                .from('content_drafts')
+                .update(updateData)
+                .eq('id', draftId)
+                .select();
+
+              if (updateError) {
+                console.error('❌ DATABASE UPDATE FAILED:', updateError);
+              } else {
+                console.log('✅ DATABASE UPDATE SUCCESS:', updateResult);
+              }
+            } else {
+              console.warn('⚠️ No generated content found in webhook response - database not updated');
+            }
+          } else {
+            console.error('❌ No draft ID available for update');
+          }
+        } else {
+          const errorText = await webhookResponse.text();
+          console.error('❌ Webhook returned non-OK status:', webhookResponse.status);
+          console.error('Error response:', errorText);
+        }
+        console.log('=== WEBHOOK REQUEST END ===');
+        })();
+
+        await Promise.race([webhookPromise, timeoutPromise]);
+
+      } catch (webhookError: any) {
+        console.error('❌ WEBHOOK REQUEST FAILED');
+        console.error('Error message:', webhookError.message);
+
+        if (webhookError.message.includes('timeout')) {
+          setWebhookTimeout(true);
+          setError('Webhook request timed out after 2 minutes. The content may still be processing.');
+        }
+      } finally {
+        setWaitingForWebhook(false);
+      }
+
+      if (generatedText || generatedImageUrl || generatedVideoUrl) {
+        setSuccess('Content regenerated successfully!');
+      } else if (!webhookTimeout) {
+        setSuccess('Draft created! Waiting for content generation...');
+      }
+
+      setTimeout(() => {
+        setSuccess(null);
+      }, 5000);
+
+    } catch (err: any) {
+      console.error('Error regenerating content:', err);
+      setError(err.message || 'Failed to regenerate content. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -728,12 +946,7 @@ function ContentBlueprintPage() {
                 <div className="text-center">
                   <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
                   <h3 className="text-xl font-bold text-slate-900 mb-2">Generating Your Content</h3>
-                  <p className="text-slate-600 mb-4">Please wait while we create your content. This may take up to 2 minutes...</p>
-                  <div className="max-w-md mx-auto bg-slate-50 rounded-lg p-4 border border-slate-200">
-                    <p className="text-sm text-slate-600 text-left">
-                      <span className="font-semibold">Status:</span> Waiting for webhook response...
-                    </p>
-                  </div>
+                  <p className="text-slate-600">Please wait while we create your content. This may take up to 2 minutes...</p>
                 </div>
               </div>
             )}
@@ -905,18 +1118,20 @@ function ContentBlueprintPage() {
                         setSuccess(null);
                         setSubmittedCampaignName('');
                         setSubmittedIdea('');
+                        setSubmittedPlatform('');
+                        setSubmittedFormat('');
+                        setSubmittedAssetSource('');
                       }}
                       className="px-6 py-3 bg-white border-2 border-slate-300 text-slate-700 rounded-lg font-semibold hover:bg-slate-50 hover:border-slate-400 transition-all"
                     >
                       Create New Content
                     </button>
                     <button
-                      onClick={() => {
-                        console.log('Regenerate clicked');
-                      }}
-                      className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-all"
+                      onClick={handleRegenerate}
+                      disabled={loading || waitingForWebhook}
+                      className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Regenerate
+                      {loading || waitingForWebhook ? 'Regenerating...' : 'Regenerate'}
                     </button>
                     <button
                       onClick={() => {
