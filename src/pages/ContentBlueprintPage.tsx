@@ -35,6 +35,8 @@ function ContentBlueprintPage() {
   const [webhookTimeout, setWebhookTimeout] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
+  const [submittedCampaignName, setSubmittedCampaignName] = useState<string>('');
+  const [submittedIdea, setSubmittedIdea] = useState<string>('');
 
   const [contentDraft, setContentDraft] = useState<ContentDraft>({
     campaignName: '',
@@ -441,6 +443,9 @@ function ContentBlueprintPage() {
         setSuccess('Draft created! Waiting for content generation...');
       }
 
+      setSubmittedCampaignName(contentDraft.campaignName.trim());
+      setSubmittedIdea(contentDraft.idea.trim());
+
       setContentDraft({
         campaignName: '',
         idea: '',
@@ -746,6 +751,24 @@ function ContentBlueprintPage() {
                 </div>
 
                 <div className="p-8 space-y-6">
+                  {(submittedCampaignName || submittedIdea) && (
+                    <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
+                      <h4 className="text-sm font-bold text-blue-900 mb-4 uppercase tracking-wide">Original Request</h4>
+                      {submittedCampaignName && (
+                        <div className="mb-4">
+                          <p className="text-xs font-semibold text-blue-700 mb-1">Campaign Name:</p>
+                          <p className="text-slate-900 text-base font-medium">{submittedCampaignName}</p>
+                        </div>
+                      )}
+                      {submittedIdea && (
+                        <div>
+                          <p className="text-xs font-semibold text-blue-700 mb-1">Content Idea:</p>
+                          <p className="text-slate-900 text-base leading-relaxed">{submittedIdea}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {generatedText && (
                     <div>
                       <div className="flex items-center gap-2 mb-3">
@@ -880,6 +903,8 @@ function ContentBlueprintPage() {
                         setUserUploadedVideoUrl(null);
                         setIsMediaReady(false);
                         setSuccess(null);
+                        setSubmittedCampaignName('');
+                        setSubmittedIdea('');
                       }}
                       className="px-6 py-3 bg-white border-2 border-slate-300 text-slate-700 rounded-lg font-semibold hover:bg-slate-50 hover:border-slate-400 transition-all"
                     >
