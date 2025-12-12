@@ -507,6 +507,60 @@ function ContentBlueprintPage() {
     }
   };
 
+  const handlePost = async () => {
+    if (!currentDraftId) {
+      setError('No content to post');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const webhookUrl = 'https://myaistaff.app.n8n.cloud/webhook-test/Approved';
+
+      const payload = {
+        draftId: currentDraftId,
+        campaignName: submittedCampaignName,
+        idea: submittedIdea,
+        platform: submittedPlatform,
+        format: submittedFormat,
+        generatedText,
+        generatedImageUrl,
+        generatedVideoUrl,
+        userUploadedImageUrl,
+        userUploadedVideoUrl,
+        userId: user?.id,
+        timestamp: new Date().toISOString(),
+      };
+
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Webhook call failed: ${response.statusText}`);
+      }
+
+      setSuccess('Content posted successfully!');
+
+      setTimeout(() => {
+        setSuccess(null);
+      }, 5000);
+
+    } catch (err: any) {
+      console.error('Error posting content:', err);
+      setError(err.message || 'Failed to post content. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleRegenerate = async () => {
     if (!submittedCampaignName || !submittedIdea) {
       setError('Cannot regenerate: missing original content information');
@@ -1191,12 +1245,11 @@ function ContentBlueprintPage() {
                       {loading ? 'Saving...' : 'Save'}
                     </button>
                     <button
-                      onClick={() => {
-                        console.log('Post clicked');
-                      }}
-                      className="px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold transition-all"
+                      onClick={handlePost}
+                      disabled={loading || waitingForWebhook || !currentDraftId}
+                      className="px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Post
+                      {loading ? 'Posting...' : 'Post'}
                     </button>
                   </div>
                 </div>
