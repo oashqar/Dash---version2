@@ -218,12 +218,12 @@ export default function LandingPage() {
                 <video
                   ref={videoRef}
                   className="w-full h-full object-cover rounded-2xl"
-                  poster="https://ntetahapqyfjomzdhayn.supabase.co/storage/v1/object/public/ai-videos/ProductIntro.mp4#t=0.1"
+                  poster="https://ntetahapqyfjomzdhayn.supabase.co/storage/v1/object/public/ai-videos/Omer%20Product%20Video.mp4#t=0.1"
                   controls={isVideoPlaying}
                   onEnded={() => setIsVideoPlaying(false)}
                   preload="metadata"
                 >
-                  <source src="https://ntetahapqyfjomzdhayn.supabase.co/storage/v1/object/public/ai-videos/ProductIntro.mp4" type="video/mp4" />
+                  <source src="https://ntetahapqyfjomzdhayn.supabase.co/storage/v1/object/public/ai-videos/Omer%20Product%20Video.mp4" type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
                 {!isVideoPlaying && (
