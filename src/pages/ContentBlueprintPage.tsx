@@ -52,43 +52,63 @@ function ContentBlueprintPage() {
 
   const uploadImageToSupabase = async (imageUrl: string, userId: string): Promise<string | null> => {
     try {
-      console.log('Downloading image from webhook URL:', imageUrl);
+      console.log('=== STARTING IMAGE UPLOAD TO SUPABASE ===');
+      console.log('Source image URL:', imageUrl);
+      console.log('User ID:', userId);
 
-      const response = await fetch(imageUrl);
+      const response = await fetch(imageUrl, {
+        mode: 'cors',
+        credentials: 'omit',
+      });
+
       if (!response.ok) {
-        throw new Error(`Failed to fetch image: ${response.statusText}`);
+        console.error('Failed to fetch image:', response.status, response.statusText);
+        throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
       }
 
       const blob = await response.blob();
+      console.log('Image downloaded successfully. Blob size:', blob.size, 'Type:', blob.type);
+
       const timestamp = Date.now();
       const fileExtension = imageUrl.split('.').pop()?.split('?')[0] || 'jpg';
       const fileName = `ai-generated-${timestamp}.${fileExtension}`;
       const filePath = `${userId}/${fileName}`;
 
-      console.log('Uploading image to Supabase storage:', filePath);
+      console.log('Uploading to Supabase storage. Path:', filePath);
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('ai-images')
         .upload(filePath, blob, {
-          contentType: blob.type,
+          contentType: blob.type || 'image/jpeg',
           cacheControl: '3600',
           upsert: false,
         });
 
       if (uploadError) {
-        console.error('Error uploading to Supabase storage:', uploadError);
+        console.error('Supabase upload error:', uploadError);
         throw uploadError;
       }
+
+      console.log('Upload successful. Data:', uploadData);
 
       const { data: publicUrlData } = supabase.storage
         .from('ai-images')
         .getPublicUrl(filePath);
 
-      console.log('Image uploaded successfully to Supabase:', publicUrlData.publicUrl);
+      console.log('=== IMAGE UPLOAD COMPLETE ===');
+      console.log('Supabase public URL:', publicUrlData.publicUrl);
       return publicUrlData.publicUrl;
 
     } catch (error: any) {
-      console.error('Error in uploadImageToSupabase:', error);
+      console.error('=== IMAGE UPLOAD FAILED ===');
+      console.error('Error type:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Full error:', error);
+
+      if (error.message?.includes('CORS') || error.message?.includes('fetch')) {
+        console.error('CORS issue detected. The image URL may not allow cross-origin requests.');
+      }
+
       return null;
     }
   };
@@ -394,11 +414,13 @@ function ContentBlueprintPage() {
             extractedText = responseData.generated_text || responseData.post_content || responseData.facebookOutput?.[0] || null;
             extractedImageUrl = responseData.generated_image_url || responseData.url?.[0] || null;
             extractedVideoUrl = responseData.generated_video_url || responseData.video_url || null;
+            console.log('Extracted from array - Text:', extractedText ? 'YES' : 'NO', 'Image URL:', extractedImageUrl, 'Video URL:', extractedVideoUrl);
           } else if (typeof webhookData === 'object' && webhookData !== null) {
             console.log('Processing object response');
             extractedText = webhookData.generated_text || webhookData.post_content || webhookData.text || webhookData.facebookOutput?.[0] || null;
             extractedImageUrl = webhookData.generated_image_url || webhookData.url?.[0] || webhookData.image_url || null;
             extractedVideoUrl = webhookData.generated_video_url || webhookData.video_url || null;
+            console.log('Extracted from object - Text:', extractedText ? 'YES' : 'NO', 'Image URL:', extractedImageUrl, 'Video URL:', extractedVideoUrl);
           }
 
           if (extractedText && typeof extractedText === 'string') {
@@ -414,12 +436,20 @@ function ContentBlueprintPage() {
 
           if (extractedImageUrl && user?.id) {
             console.log('=== UPLOADING IMAGE TO SUPABASE ===');
+            console.log('Conditions met: extractedImageUrl exists and user ID is present');
             const uploadedUrl = await uploadImageToSupabase(extractedImageUrl, user.id);
             if (uploadedUrl) {
               supabaseImageUrl = uploadedUrl;
               console.log('Successfully uploaded image to Supabase storage');
             } else {
-              console.warn('Failed to upload image to Supabase, using original URL');
+              console.warn('Failed to upload image to Supabase, using original URL as fallback');
+            }
+          } else {
+            if (!extractedImageUrl) {
+              console.warn('No image URL extracted from webhook response - skipping upload');
+            }
+            if (!user?.id) {
+              console.error('User ID not available - cannot upload to Supabase');
             }
           }
 
@@ -732,10 +762,12 @@ function ContentBlueprintPage() {
             extractedText = responseData.generated_text || responseData.post_content || responseData.facebookOutput?.[0] || null;
             extractedImageUrl = responseData.generated_image_url || responseData.url?.[0] || null;
             extractedVideoUrl = responseData.generated_video_url || responseData.video_url || null;
+            console.log('Extracted from array (REGENERATE) - Text:', extractedText ? 'YES' : 'NO', 'Image URL:', extractedImageUrl, 'Video URL:', extractedVideoUrl);
           } else if (typeof webhookData === 'object' && webhookData !== null) {
             extractedText = webhookData.generated_text || webhookData.post_content || webhookData.text || webhookData.facebookOutput?.[0] || null;
             extractedImageUrl = webhookData.generated_image_url || webhookData.url?.[0] || webhookData.image_url || null;
             extractedVideoUrl = webhookData.generated_video_url || webhookData.video_url || null;
+            console.log('Extracted from object (REGENERATE) - Text:', extractedText ? 'YES' : 'NO', 'Image URL:', extractedImageUrl, 'Video URL:', extractedVideoUrl);
           }
 
           if (extractedText && typeof extractedText === 'string') {
@@ -751,12 +783,20 @@ function ContentBlueprintPage() {
 
           if (extractedImageUrl && user?.id) {
             console.log('=== UPLOADING IMAGE TO SUPABASE (REGENERATE) ===');
+            console.log('Conditions met: extractedImageUrl exists and user ID is present');
             const uploadedUrl = await uploadImageToSupabase(extractedImageUrl, user.id);
             if (uploadedUrl) {
               supabaseImageUrl = uploadedUrl;
               console.log('Successfully uploaded image to Supabase storage');
             } else {
-              console.warn('Failed to upload image to Supabase, using original URL');
+              console.warn('Failed to upload image to Supabase, using original URL as fallback');
+            }
+          } else {
+            if (!extractedImageUrl) {
+              console.warn('No image URL extracted from webhook response - skipping upload');
+            }
+            if (!user?.id) {
+              console.error('User ID not available - cannot upload to Supabase');
             }
           }
 
