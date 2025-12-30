@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Bot, Mail, Lock, User, ArrowRight, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { signUp, signIn } from '../lib/auth';
+import { supabase } from '../lib/supabase';
 
 function AuthPage() {
   const navigate = useNavigate();
@@ -13,6 +14,21 @@ function AuthPage() {
     if (mode === 'signup') {
       setIsLogin(false);
     }
+
+    const testConnection = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Supabase connection test failed:', error);
+        } else {
+          console.log('Supabase connected successfully');
+        }
+      } catch (err) {
+        console.error('Failed to connect to Supabase:', err);
+      }
+    };
+
+    testConnection();
   }, [searchParams]);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -44,7 +60,9 @@ function AuthPage() {
         setFormData({ name: '', email: formData.email, password: '' });
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred. Please try again.');
+      console.error('Auth error details:', err);
+      const errorMessage = err?.message || err?.error_description || 'An error occurred. Please try again.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
