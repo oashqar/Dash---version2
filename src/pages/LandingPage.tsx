@@ -8,10 +8,8 @@ import type { User } from '@supabase/supabase-js';
 export default function LandingPage() {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [hoveredFeature, setHoveredFeature] = useState<number | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
   const videoSectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -43,11 +41,7 @@ export default function LandingPage() {
   };
 
   const handleWatchDemo = () => {
-    setIsVideoPlaying(true);
     videoSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    setTimeout(() => {
-      videoRef.current?.play();
-    }, 500);
   };
 
   const displayName = user?.user_metadata?.display_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
@@ -214,34 +208,28 @@ export default function LandingPage() {
           <div ref={videoSectionRef} className="relative animate-scale-in" style={{ animationDelay: '0.4s' }}>
             <div className="absolute -inset-4 bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 rounded-3xl blur-2xl opacity-20" />
             <div className="relative bg-white/50 backdrop-blur-sm rounded-3xl p-4 shadow-2xl border border-gray-200">
-              <div className="relative w-full aspect-video bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl overflow-hidden">
-                <video
-                  ref={videoRef}
-                  className="w-full h-full object-cover rounded-2xl"
-                  poster="https://ntetahapqyfjomzdhayn.supabase.co/storage/v1/object/public/ai-videos/Omer%20Product%20Video.mp4#t=0.1"
-                  controls={isVideoPlaying}
-                  onEnded={() => setIsVideoPlaying(false)}
-                  preload="metadata"
-                >
-                  <source src="https://ntetahapqyfjomzdhayn.supabase.co/storage/v1/object/public/ai-videos/Omer%20Product%20Video.mp4" type="video/mp4" />
-                  Your browser does not support the video tag.
-                </video>
-                {!isVideoPlaying && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-                    <div className="text-center">
-                      <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-orange-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-xl hover:scale-110 transition-transform cursor-pointer" onClick={handleWatchDemo}>
-                        <svg
-                          className="w-10 h-10 text-white ml-1"
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
-                        </svg>
-                      </div>
-                      <p className="text-white text-lg font-semibold">Watch Product Demo</p>
+              <div className="relative w-full aspect-video bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl overflow-hidden flex items-center justify-center">
+                <div className="text-center px-8">
+                  <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-orange-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-xl">
+                    <Zap className="w-10 h-10 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-3">Experience Dash.ai in Action</h3>
+                  <p className="text-gray-300 text-lg mb-6">See how our AI-powered platform transforms your workflow in minutes</p>
+                  <div className="flex flex-wrap items-center justify-center gap-4">
+                    <div className="flex items-center gap-2 text-white">
+                      <Sparkles className="w-5 h-5 text-orange-400" />
+                      <span>Instant Content</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-white">
+                      <Target className="w-5 h-5 text-pink-400" />
+                      <span>Smart Targeting</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-white">
+                      <MessageSquare className="w-5 h-5 text-purple-400" />
+                      <span>24/7 Support</span>
                     </div>
                   </div>
-                )}
+                </div>
               </div>
             </div>
           </div>
