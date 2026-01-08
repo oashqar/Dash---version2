@@ -59,6 +59,16 @@ export function Sidebar() {
                 Creation
               </button>
               <button
+                onClick={() => navigate('/paid-content-strategy')}
+                className={`w-full px-4 py-2.5 text-left rounded-xl font-semibold transition-all transform hover:scale-105 ${
+                  isActive('/paid-content-strategy')
+                    ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow-lg'
+                    : 'text-gray-700 bg-white/60 hover:bg-orange-50 border-2 border-orange-200/50'
+                }`}
+              >
+                Paid Strategy
+              </button>
+              <button
                 onClick={() => navigate('/content-review')}
                 className={`w-full px-4 py-2.5 text-left rounded-xl font-semibold transition-all transform hover:scale-105 ${
                   isActive('/content-review')
