@@ -5,6 +5,7 @@ import AuthPage from './pages/AuthPage';
 import ContentBlueprintPage from './pages/ContentBlueprintPage';
 import ContentReviewPage from './pages/ContentReviewPage';
 import ContentHistoryPage from './pages/ContentHistoryPage';
+import PaidContentStrategyPage from './pages/PaidContentStrategyPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -35,6 +36,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <ContentHistoryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/paid-content-strategy"
+            element={
+              <ProtectedRoute>
+                <PaidContentStrategyPage />
               </ProtectedRoute>
             }
           />
