@@ -84,7 +84,6 @@ function PaidContentPage() {
       formData.campaignName.trim() !== '' &&
       formData.primaryGoal !== '' &&
       formData.targetPlatform !== '' &&
-      formData.audienceType !== '' &&
       formData.audienceCharacteristics.trim() !== '' &&
       formData.budgetType !== '' &&
       formData.budgetAmount !== '' &&
@@ -378,7 +377,7 @@ function PaidContentPage() {
                     Primary Goal <span className="text-red-500">*</span>
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {['Brand Awareness', 'Traffic', 'Leads', 'Sales', 'App Installs'].map((goal) => (
+                    {['Brand Awareness', 'Traffic', 'Leads'].map((goal) => (
                       <button
                         key={goal}
                         type="button"
@@ -400,7 +399,7 @@ function PaidContentPage() {
                     Target Platform <span className="text-red-500">*</span>
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {['Meta', 'TikTok', 'Google/YouTube', 'LinkedIn', 'X'].map((platform) => (
+                    {['Facebook', 'X', 'Instagram'].map((platform) => (
                       <button
                         key={platform}
                         type="button"
@@ -425,28 +424,6 @@ function PaidContentPage() {
               </h2>
 
               <div className="space-y-5">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-3">
-                    Audience Type <span className="text-red-500">*</span>
-                  </label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {['Cold', 'Warm', 'Retargeting'].map((type) => (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() => updateField('audienceType', type)}
-                        className={`px-4 py-3 rounded-lg font-semibold transition-all ${
-                          formData.audienceType === type
-                            ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow-lg'
-                            : 'bg-white border-2 border-orange-200 text-gray-700 hover:border-orange-400 hover:bg-orange-50'
-                        }`}
-                      >
-                        {type}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 <div>
                   <label htmlFor="audienceCharacteristics" className="block text-sm font-semibold text-slate-700 mb-2">
                     Audience Characteristics <span className="text-red-500">*</span>
@@ -491,7 +468,6 @@ function PaidContentPage() {
                       <option value="">All</option>
                       <option value="Male">Male</option>
                       <option value="Female">Female</option>
-                      <option value="Non-binary">Non-binary</option>
                     </select>
                   </div>
 
@@ -654,7 +630,7 @@ function PaidContentPage() {
                     Brand Tone <span className="text-red-500">*</span>
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {['Professional', 'Friendly', 'Bold', 'Luxury', 'Playful'].map((tone) => (
+                    {['Professional', 'Friendly', 'Bold'].map((tone) => (
                       <button
                         key={tone}
                         type="button"
