@@ -3,6 +3,7 @@ import { AuthProvider } from './lib/authContext';
 import LandingPage from './pages/LandingPage';
 import AuthPage from './pages/AuthPage';
 import ContentBlueprintPage from './pages/ContentBlueprintPage';
+import PaidContentPage from './pages/PaidContentPage';
 import ContentReviewPage from './pages/ContentReviewPage';
 import ContentHistoryPage from './pages/ContentHistoryPage';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -19,6 +20,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <ContentBlueprintPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/paid-content"
+            element={
+              <ProtectedRoute>
+                <PaidContentPage />
               </ProtectedRoute>
             }
           />
